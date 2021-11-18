@@ -103,7 +103,7 @@ def bg_prop(img: np.ndarray):
     for _ in range(3):
         temp = pool_2d(temp, kernel_size=3, pool="max")
 
-    cv2.imshow("est", temp)
+    # cv2.imshow("est", temp)
 
     # temp = cv2.equalizeHist(temp)
 
@@ -111,9 +111,10 @@ def bg_prop(img: np.ndarray):
     temp = remove_small_dots(temp)
     temp = fill_holes(temp)
     # cv2.imshow("bin", shadow_binarization(temp))
-    cv2.imshow("hole filled", temp)
+    # cv2.imshow("hole filled", temp)
 
     diff = cv2.bitwise_and(img, cv2.cvtColor(temp, cv2.COLOR_GRAY2BGR))
     cv2.imshow("diff", diff)
+    return diff, temp
     # return max_kernel
     # return temp
