@@ -5,6 +5,8 @@ import copy
 
 
 def pool_2d(img: np.ndarray, kernel_size=3, stride=1, padding=0, pool="max"):
+    img = cv2.copyMakeBorder(
+        img, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=0)
     tar_shape = ((img.shape[0] - kernel_size) // stride + 1,
                  (img.shape[1] - kernel_size) // stride + 1)
 
@@ -66,36 +68,39 @@ def shadow_binarization(img: np.ndarray):
     return filtered
 
 
-def cvFillHoles(img):
-    gray = img.copy()
-    des = cv2.bitwise_not(gray)
+def remove_small_dots(img):
+    output = img.copy()
+    # Clear small blck dots with dilation
+    kernel = np.ones((3, 3), dtype=np.uint8)
+    res = cv2.dilate(output, kernel, iterations=1)
+    return res
+
+
+def fill_holes(img):
+    output = img.copy()
+    des = cv2.bitwise_not(output)
     contours, hierachy = cv2.findContours(
         des, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+
     # Find the contours first
     des = cv2.drawContours(des, contours, -1, 255, -1)
     gray = cv2.bitwise_not(des)
 
-    # Clear small black dots with dilation
-    kernel = np.ones((3, 3), dtype=np.uint8)
-    res = cv2.dilate(gray, kernel, iterations=1)
-
     # Use opening with a 13 * 13 elipse to find the shadow
     # Maybe can try tune the size IDK
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13, 13))
-    res = cv2.morphologyEx(res, cv2.MORPH_OPEN, kernel)
+    res = cv2.morphologyEx(gray, cv2.MORPH_OPEN, kernel)
     return res
 
 
 def bg_prop(img: np.ndarray):
     temp = copy.deepcopy(img)
-    # Add padding if I want
-    # temp = np.pad(temp, 0, mode="constant")
 
     # I thought you do it like this
     # temp = est_bg(temp, 3)
 
     # Turns out this looks like it makes more sense
-    for _ in range(2):
+    for _ in range(3):
         temp = pool_2d(temp, kernel_size=3, pool="max")
 
     cv2.imshow("est", temp)
@@ -103,9 +108,12 @@ def bg_prop(img: np.ndarray):
     # temp = cv2.equalizeHist(temp)
 
     temp = shadow_binarization(temp)
-    cv2.imshow("bin", temp)
-    temp = cvFillHoles(temp)
+    temp = remove_small_dots(temp)
+    temp = fill_holes(temp)
     # cv2.imshow("bin", shadow_binarization(temp))
     cv2.imshow("hole filled", temp)
+
+    diff = cv2.bitwise_and(img, cv2.cvtColor(temp, cv2.COLOR_GRAY2BGR))
+    cv2.imshow("diff", diff)
     # return max_kernel
     # return temp
