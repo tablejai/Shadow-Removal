@@ -2,6 +2,7 @@ import time
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import threading
 
 
 def max_filtering(height, width, size, I_temp):
@@ -30,8 +31,9 @@ def min_filtering(height, width, size, A):
 
 def background_subtraction(original_img, B):
     diff = original_img - B
-    return cv2.normalize(diff, None, 0, 255, norm_type=cv2.NORM_MINMAX)
-
+    temp  = cv2.normalize(diff, None, 0, 255, norm_type=cv2.NORM_MINMAX)
+    print("temp", temp)
+    return temp
 def ROI_mean(img, mask):
     sum_ = 0
     cnt = 0
@@ -45,25 +47,25 @@ def ROI_mean(img, mask):
     print(mean_)
     return mean_
 
-def min_max_filtering(original_img, size):
+def min_max_filtering(original_img, size, title = ""):
     height, width = original_img.shape[:2]
     kernel_size = 3
     kernel = np.ones((kernel_size,kernel_size),np.float32)/(kernel_size*kernel_size)
 
     max_img = max_filtering(height, width, size, original_img)    
-    max_img_blurred = cv2.filter2D(max_img.astype(np.float32),-1,kernel)
-        
+    max_img_blurred = cv2.filter2D(max_img.astype(np.float32), -1, kernel)
+
     min_img = min_filtering(height, width, size, max_img_blurred)
-    min_img_blurred = cv2.filter2D(min_img.astype(np.float32),-1,kernel)
-          
-          
-    _, shadow_filter = cv2.threshold(max_img_blurred.astype(np.uint8), 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-    ROI_mean(original_img, 255-shadow_filter)
-    
-    plt.subplot(2, 2, 1)
-    plt.imshow(max_img_blurred, cmap='gray')
-    plt.subplot(2, 2, 2)
-    plt.imshow(min_img_blurred, cmap='gray')
+    min_img_blurred = cv2.filter2D(min_img.astype(np.float32), -1, kernel)
+
+    # _, shadow_filter = cv2.threshold(max_img_blurred.astype(np.uint8), 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    # ROI_mean(original_img, 255-shadow_filter)
+    plt.figure()
+    plt.subplot(1, 2, 1)
+    plt.imshow(max_img_blurred, cmap  = "gray")
+    plt.subplot(1, 2, 2)
+    plt.imshow(min_img_blurred, cmap  = "gray")
+
     return background_subtraction(original_img, min_img_blurred)
 
 
@@ -80,21 +82,28 @@ def plot_histogram(img):
     plt.plot(bin_edges[0:-1], histogram)  # <- or here
     plt.show()
 
-
+def foo(arg1, arg2, arg3):
+    print(arg3)
+    
 if __name__ == '__main__':
     t0 = time.time()
-    plt.figure(figsize=(5, 5))
 
-    img = cv2.imread('datasets/006_029.jpg', cv2.IMREAD_GRAYSCALE)
-    
-    output = min_max_filtering(img, 11).astype(np.uint8)
-    # _, output = cv2.threshold(output, 180, 255, cv2.THRESH_BINARY)
+    img = cv2.imread('datasets/test.jpg')
+    img_b, img_g, img_r = cv2.split(img)
+ 
+    img_b = min_max_filtering(img_b, 11).astype(np.uint8)
+    img_g = min_max_filtering(img_g, 11).astype(np.uint8)
+    img_r = min_max_filtering(img_r, 11).astype(np.uint8)
     
     t1 = time.time()
     print(f'used time = {t1 - t0}')
     
-    plt.subplot(2, 2, 3)
-    plt.imshow(img, cmap='gray')
-    plt.subplot(2, 2, 4)
-    plt.imshow(output, cmap='gray', vmin=0, vmax=255)
+    plt.figure(figsize=(5, 5))
+    plt.title("origin and output")
+    plt.subplot(1, 2, 1)
+    plt.imshow(img)
+    plt.subplot(1, 2, 2)
+    
+    merged = cv2.merge((img_b, img_g, img_r))
+    plt.imshow(merged)
     plt.show()
