@@ -91,12 +91,12 @@ if __name__ == '__main__':
     t0 = time.time()
     plt.figure(figsize=(5, 5))
 
-    img = cv2.imread('datasets/001_002.jpg', cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread('datasets/002_022.jpg', cv2.IMREAD_GRAYSCALE)
     output = min_max_filtering(img, 11).astype(np.uint8)
 
     real_text_color = np.min(output)
 
-    _, binary = cv2.threshold(output, 180, 255, cv2.THRESH_BINARY)
+    _, binary = cv2.threshold(output, 150, 255, cv2.THRESH_BINARY)
 
     print("Binary.shape: {binary.shape}")
 
