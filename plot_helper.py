@@ -10,11 +10,12 @@ def plot_histogram_rgb(img):
     plt.show()
 
 
-def plot_histogram_gray(img, title="", new_fig=False):
+def plot_histogram_1Channel(img, title="", new_fig=False):
     if new_fig:
         plt.figure()
     # density=False would make counts
     plt.title(title)
     plt.hist(np.ravel(img), density=True, bins=256)
+    plt.xlim([0, 256])
     plt.ylabel('Probability')
     plt.xlabel('Data')
