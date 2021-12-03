@@ -42,9 +42,20 @@ def global_background_mean(img, mask):
 
 
 def normalize(orig_img, img, title=""):
-    # img = img+240
-    plot_histogram_gray(orig_img, title+"_original", True)
-    plot_histogram_gray(img, title+"_normed", True)
+
+    plt.figure()
+    plt.subplot(1, 2, 1)
+    plt.title(title+"_original")
+    y_hist, x_hist, _ = plt.hist(np.ravel(orig_img), density=True, bins=256)
+
+    offset = x_hist[np.where(y_hist == y_hist.max())]
+
+    img = img + offset
+
+    plt.subplot(1, 2, 2)
+    plt.title(title+"_normalized")
+    plt.hist(np.ravel(img), density=True, bins=256)
+
     return img
 
 
@@ -70,7 +81,7 @@ def min_max_filtering(original_img, size, title=""):
 
     normed = normalize(original_img, diff, title)
 
-    return normed, min_img_blurred, max_img_blurred
+    return normed
 
 
 def plot_histogram_rgb(img):
@@ -103,9 +114,9 @@ if __name__ == '__main__':
     img_b, img_g, img_r = cv2.split(img)
     # plot_histogram_gray(img_r, "R_orig", True)
 
-    img_b, img_b_min, img_b_max = min_max_filtering(img_b, 11, "B")
-    img_g, img_g_min, img_g_max = min_max_filtering(img_g, 11, "G")
-    img_r, img_r_min, img_r_max = min_max_filtering(img_r, 11, "R")
+    img_b = min_max_filtering(img_b, 11, "B")
+    img_g = min_max_filtering(img_g, 11, "G")
+    img_r = min_max_filtering(img_r, 11, "R")
 
     print(f'used time = {time.time() - t0}')
 
