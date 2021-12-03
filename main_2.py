@@ -2,7 +2,6 @@ import time
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import threading
 
 
 def max_filtering(height, width, size, I_temp):
@@ -29,49 +28,47 @@ def min_filtering(height, width, size, A):
     return temp_min[n:height+n, n:width+n]
 
 
-def background_subtraction(original_img, B, title = ""):
-    # this method works on rgb image
-    diff = original_img - B + 240
-    
-    # this method works on gray image
-    # temp  = cv2.normalize(diff, None, 0, 255, norm_type=cv2.NORM_MINMAX).astype(np.uint8)
-
+def background_subtraction(original_img, B, title=""):
+    diff = original_img - B
     return diff
 
 
-def ROI_mean(img, mask):
-    sum_ = 0
-    cnt = 0
-    for i in range(img.shape[0]):
-        for j in range(img.shape[1]):
-            if mask[i, j]:
-                cnt = cnt + 1
-                sum_ += img[i][j]
+def global_background_mean(img, mask):
+    t = cv2.mean(img, mask)[0]
+    cv2.imshow("img", img)
+    cv2.imshow("mask", mask)
+    print("gloabl mean", t)
+    return t
 
-    mean_ = sum_ / cnt
-    print(mean_)
-    return mean_
 
-def min_max_filtering(original_img, size, title = ""):
+def normalize(orig_img, img):
+    matched = match_histograms(img, orig_img)
+    return matched
+
+
+def min_max_filtering(original_img, size, title=""):
     height, width = original_img.shape[:2]
-    kernel_size = 5
-    kernel = np.ones((kernel_size,kernel_size),np.float32)/(kernel_size*kernel_size)
 
-    max_img = max_filtering(height, width, size, original_img)    
+    kernel_size = 9
+    kernel = np.ones((kernel_size, kernel_size), np.float32) / \
+        (kernel_size*kernel_size)
+    max_img = max_filtering(height, width, size, original_img)
     max_img_blurred = cv2.filter2D(max_img.astype(np.float32), -1, kernel)
 
-    kernel_size = 3
-    kernel = np.ones((kernel_size,kernel_size),np.float32)/(kernel_size*kernel_size)
+    kernel_size = 9
+    kernel = np.ones((kernel_size, kernel_size), np.float32) / \
+        (kernel_size*kernel_size)
     min_img = min_filtering(height, width, size, max_img_blurred)
     min_img_blurred = cv2.filter2D(min_img.astype(np.float32), -1, kernel)
 
-    res = cv2.hconcat((max_img_blurred, min_img_blurred))
-    cv2.imshow(title, res.astype(np.uint8))
+    cv2.imshow(title,  cv2.hconcat(
+        (max_img_blurred, min_img_blurred)).astype(np.uint8))
 
-    temp =  background_subtraction(original_img, min_img_blurred, title)
-    
-    # plot_histogram(temp)
-    return temp
+    diff = background_subtraction(original_img, min_img_blurred)
+
+    normed = normalize(original_img, diff)
+
+    return normed, min_img_blurred, max_img_blurred
 
 
 def plot_histogram_rgb(img):
@@ -83,35 +80,46 @@ def plot_histogram_rgb(img):
     plt.show()
 
 
-def plot_grayscale_histogram(img):
+def plot_histogram_gray(img, title="", new_fig=False):
+    if new_fig:
+        plt.figure()
     # density=False would make counts
-    plt.subplot(2, 2, 3)
+    plt.title(title)
     plt.hist(np.ravel(img), density=True, bins=256)
     plt.ylabel('Probability')
     plt.xlabel('Data')
 
-def foo(arg1, arg2, arg3):
-    print(arg3)
-    
+
 if __name__ == '__main__':
+
+    img = cv2.imread('datasets/test2.jpg')
+    # img = cv2.imread('datasets/009_020.jpg')
+    img = cv2.resize(img, (0, 0), fx=0.3, fy=0.3)
+
     t0 = time.time()
 
-    img = cv2.imread('datasets/test.jpg')
-    img = cv2.resize(img, (0,0), fx=0.1, fy=0.1);
-
     img_b, img_g, img_r = cv2.split(img)
- 
-    img_b = min_max_filtering(img_b, 11, "B").astype(np.uint8)
-    img_g = min_max_filtering(img_g, 11, "G").astype(np.uint8)
-    img_r = min_max_filtering(img_r, 11, "R").astype(np.uint8)
-    
-    t1 = time.time()
-    print(f'used time = {t1 - t0}')
-    
-    
+    plot_histogram_gray(img_r, "R_orig", True)
+
+    img_b, img_b_min, img_b_max = min_max_filtering(img_b, 11, "B")
+    img_g, img_g_min, img_g_max = min_max_filtering(img_g, 11, "G")
+    img_r, img_r_min, img_r_max = min_max_filtering(img_r, 11, "R")
+
+    print(f'used time = {time.time() - t0}')
+
+    plot_histogram_gray(img_b, "B", True)
+    plot_histogram_gray(img_g, "G", True)
+    plot_histogram_gray(img_r, "R", True)
+
+    img_b = img_b.astype(np.uint8)
+    img_g = img_g.astype(np.uint8)
+    img_r = img_r.astype(np.uint8)
+
     merged = cv2.merge((img_b, img_g, img_r))
     final_img = cv2.hconcat((img, merged))
-    cv2.imshow("img", final_img)
+    cv2.imshow("result", final_img)
+
+    plt.show()
+
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-
