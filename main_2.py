@@ -41,9 +41,11 @@ def global_background_mean(img, mask):
     return t
 
 
-def normalize(orig_img, img):
-    matched = match_histograms(img, orig_img)
-    return matched
+def normalize(orig_img, img, title=""):
+    # img = img+240
+    plot_histogram_gray(orig_img, title+"_original", True)
+    plot_histogram_gray(img, title+"_normed", True)
+    return img
 
 
 def min_max_filtering(original_img, size, title=""):
@@ -66,7 +68,7 @@ def min_max_filtering(original_img, size, title=""):
 
     diff = background_subtraction(original_img, min_img_blurred)
 
-    normed = normalize(original_img, diff)
+    normed = normalize(original_img, diff, title)
 
     return normed, min_img_blurred, max_img_blurred
 
@@ -99,17 +101,13 @@ if __name__ == '__main__':
     t0 = time.time()
 
     img_b, img_g, img_r = cv2.split(img)
-    plot_histogram_gray(img_r, "R_orig", True)
+    # plot_histogram_gray(img_r, "R_orig", True)
 
     img_b, img_b_min, img_b_max = min_max_filtering(img_b, 11, "B")
     img_g, img_g_min, img_g_max = min_max_filtering(img_g, 11, "G")
     img_r, img_r_min, img_r_max = min_max_filtering(img_r, 11, "R")
 
     print(f'used time = {time.time() - t0}')
-
-    plot_histogram_gray(img_b, "B", True)
-    plot_histogram_gray(img_g, "G", True)
-    plot_histogram_gray(img_r, "R", True)
 
     img_b = img_b.astype(np.uint8)
     img_g = img_g.astype(np.uint8)
