@@ -28,8 +28,8 @@ def min_filtering(height, width, size, A):
     return temp_min[n:height+n, n:width+n]
 
 
-def background_subtraction(original_img, B, title=""):
-    diff = original_img - B
+def background_subtraction(original_img, background, title=""):
+    diff = original_img - background
     return diff
 
 
@@ -46,6 +46,7 @@ def normalize(orig_img, img, title=""):
     plt.figure()
     plt.subplot(1, 2, 1)
     plt.title(title+"_original")
+
     y_hist, x_hist, _ = plt.hist(np.ravel(orig_img), density=True, bins=256)
 
     offset = x_hist[np.where(y_hist == y_hist.max())]
@@ -62,19 +63,19 @@ def normalize(orig_img, img, title=""):
 def min_max_filtering(original_img, size, title=""):
     height, width = original_img.shape[:2]
 
-    kernel_size = 9
+    kernel_size = 3
     kernel = np.ones((kernel_size, kernel_size), np.float32) / \
         (kernel_size*kernel_size)
     max_img = max_filtering(height, width, size, original_img)
     max_img_blurred = cv2.filter2D(max_img.astype(np.float32), -1, kernel)
 
-    kernel_size = 9
+    kernel_size = 3
     kernel = np.ones((kernel_size, kernel_size), np.float32) / \
         (kernel_size*kernel_size)
     min_img = min_filtering(height, width, size, max_img_blurred)
     min_img_blurred = cv2.filter2D(min_img.astype(np.float32), -1, kernel)
 
-    cv2.imshow(title,  cv2.hconcat(
+    cv2.imshow(title, cv2.hconcat(
         (max_img_blurred, min_img_blurred)).astype(np.uint8))
 
     diff = background_subtraction(original_img, min_img_blurred)
@@ -106,28 +107,22 @@ def plot_histogram_gray(img, title="", new_fig=False):
 if __name__ == '__main__':
 
     img = cv2.imread('datasets/test2.jpg')
-    # img = cv2.imread('datasets/009_020.jpg')
-    img = cv2.resize(img, (0, 0), fx=0.3, fy=0.3)
+    # img = cv2.imread('datasets/001_007.jpg')
+    img = cv2.resize(img, (0, 0), fx=0.5, fy=0.5)
 
     t0 = time.time()
 
     img_b, img_g, img_r = cv2.split(img)
-    # plot_histogram_gray(img_r, "R_orig", True)
 
-    img_b = min_max_filtering(img_b, 11, "B")
-    img_g = min_max_filtering(img_g, 11, "G")
-    img_r = min_max_filtering(img_r, 11, "R")
+    img_b = min_max_filtering(img_b, 11, "B").astype(np.uint8)
+    img_g = min_max_filtering(img_g, 11, "G").astype(np.uint8)
+    img_r = min_max_filtering(img_r, 11, "R").astype(np.uint8)
 
     print(f'used time = {time.time() - t0}')
-
-    img_b = img_b.astype(np.uint8)
-    img_g = img_g.astype(np.uint8)
-    img_r = img_r.astype(np.uint8)
 
     merged = cv2.merge((img_b, img_g, img_r))
     final_img = cv2.hconcat((img, merged))
     cv2.imshow("result", final_img)
-
     plt.show()
 
     cv2.waitKey(0)
