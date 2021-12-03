@@ -2,6 +2,7 @@ import time
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from plot_helper import plot_histogram_gray, plot_histogram_rgb
 
 
 def max_filtering(height, width, size, I_temp):
@@ -50,7 +51,6 @@ def normalize(orig_img, img, title=""):
     y_hist, x_hist, _ = plt.hist(np.ravel(orig_img), density=True, bins=256)
 
     offset = x_hist[np.where(y_hist == y_hist.max())]
-
     img = img + offset
 
     plt.subplot(1, 2, 2)
@@ -83,25 +83,6 @@ def min_max_filtering(original_img, size, title=""):
     normed = normalize(original_img, diff, title)
 
     return normed
-
-
-def plot_histogram_rgb(img):
-    color = ('b', 'g', 'r')
-    for i, col in enumerate(color):
-        histr = cv2.calcHist([img], [i], None, [256], [0, 256])
-        plt.plot(histr, color=col)
-        plt.xlim([0, 256])
-    plt.show()
-
-
-def plot_histogram_gray(img, title="", new_fig=False):
-    if new_fig:
-        plt.figure()
-    # density=False would make counts
-    plt.title(title)
-    plt.hist(np.ravel(img), density=True, bins=256)
-    plt.ylabel('Probability')
-    plt.xlabel('Data')
 
 
 if __name__ == '__main__':
