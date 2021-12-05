@@ -91,7 +91,8 @@ def min_max_filtering(original_img, size, title=""):
 
 if __name__ == '__main__':
 
-    img = cv2.imread('datasets/test7.jpg')
+    # img = cv2.imread('datasets/test7.jpg')
+    img = cv2.imread('datasets/rect.jpg')
     # img = cv2.imread('datasets/001_007.jpg')
     img = cv2.resize(img, (0, 0), fx=0.3, fy=0.3)
 
@@ -102,7 +103,7 @@ if __name__ == '__main__':
     img_b = min_max_filtering(img_b, 11, "B").astype(np.uint8)
     img_g = min_max_filtering(img_g, 11, "G").astype(np.uint8)
     img_r = min_max_filtering(img_r, 11, "R").astype(np.uint8)
-    print(f'used time = {time.time() - t0}')
+    # print(f'used time = {time.time() - t0}')
 
     merged = cv2.merge((img_b, img_g, img_r))
     final_img = cv2.hconcat((img, merged))
