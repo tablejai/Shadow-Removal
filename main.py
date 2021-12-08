@@ -2,7 +2,7 @@ import time
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from plot_helper import plot_histogram_1Channel, plot_histogram_rgb
+# from plot_helper import plot_histogram_1Channel, plot_histogram_rgb
 
 
 def max_filtering(height, width, size, I_temp):
@@ -30,7 +30,7 @@ def min_filtering(height, width, size, A):
 
 
 def background_subtraction(original_img, background, title=""):
-    diff = original_img - background
+    diff = original_img.astype(np.int8) - background.astype(np.int8)
     return diff
 
 
@@ -40,6 +40,18 @@ def global_background_mean(img, mask):
     cv2.imshow("mask", mask)
     print("gloabl mean", t)
     return t
+
+
+def normalize_shodowed_text(img, mask, offset, title=""):
+    result = img
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            if mask[i, j]:
+                result[i, j] += offset
+                # if result[i, j] < 0:
+                #     result[i, j] = 0
+
+    return result
 
 
 def normalize(orig_img, img, title=""):
@@ -57,11 +69,12 @@ def normalize(orig_img, img, title=""):
 
     offset = x_hist[np.where(y_hist == y_hist.max())]
     img = img + offset
+
     for i in range(img.shape[0]):
         for j in range(img.shape[1]):
             if img[i, j] < 0:
                 img[i, j] = 0
-                
+
     plt.subplot(1, 3, 3)
     plt.xlim([0, 256])
     plt.title(title+"_normalized")
@@ -71,26 +84,31 @@ def normalize(orig_img, img, title=""):
 
 
 def min_max_filtering(original_img, size, title=""):
-    height, width = original_img.shape[:2]
 
-    kernel_size = 5
-    kernel = np.ones((kernel_size, kernel_size), np.float32) / \
-        (kernel_size*kernel_size)
-    max_img = max_filtering(height, width, size, original_img)
-    max_img_blurred = cv2.filter2D(max_img.astype(np.float32), -1, kernel)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (size, size))
+    shadow = cv2.morphologyEx(
+        original_img, cv2.MORPH_CLOSE, kernel, iterations=4)
+    cv2.imshow("shadow"+title, shadow)
 
-    kernel_size = 5
-    kernel = np.ones((kernel_size, kernel_size), np.float32) / \
-        (kernel_size*kernel_size)
-    min_img = min_filtering(height, width, size, max_img_blurred)
-    min_img_blurred = cv2.filter2D(min_img.astype(np.float32), -1, kernel)
+    diff = background_subtraction(original_img, shadow, title)
 
-    # cv2.imshow(title, cv2.hconcat(
-    #     (max_img_blurred, min_img_blurred)).astype(np.uint8))
-    diff = background_subtraction(original_img, min_img_blurred)
+    shadow_mask = 255-cv2.threshold(shadow.astype(np.uint8), 110, 255, cv2.THRESH_BINARY)[
+        1]
 
     normed = normalize(original_img, diff, title)
-    return normed
+
+    text_mask = 255-cv2.threshold(normed.astype(np.uint8), 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)[
+        1]
+
+    t1 = cv2.mean(original_img, ~shadow_mask)[0]
+    # TODO: here we should use local shadow mean instead of global
+    t2 = cv2.mean(original_img, shadow_mask)[0]
+    offset = t1-t2
+
+    normed2 = normalize_shodowed_text(
+        normed, shadow_mask & text_mask, offset, title)
+
+    return normed2
 
 
 if __name__ == '__main__':
@@ -100,14 +118,15 @@ if __name__ == '__main__':
     t0 = time.time()
 
     img_b, img_g, img_r = cv2.split(img)
-    
-    img_b = min_max_filtering(img_b, 11, "B").astype(np.uint8)
-    img_g = min_max_filtering(img_g, 11, "G").astype(np.uint8)
-    img_r = min_max_filtering(img_r, 11, "R").astype(np.uint8)
+
+    img_b = min_max_filtering(img_b, 5, "B").astype(np.uint8)
+    img_g = min_max_filtering(img_g, 5, "G").astype(np.uint8)
+    img_r = min_max_filtering(img_r, 5, "R").astype(np.uint8)
     # print(f'used time = {time.time() - t0}')
 
     merged = cv2.merge((img_b, img_g, img_r))
     final_img = cv2.hconcat((img, merged))
+    cv2.imshow("final_img", final_img)
     plt.show()
 
     cv2.waitKey(0)
