@@ -3,30 +3,30 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from plot_helper import plot_histogram_1Channel, plot_histogram_rgb
+import threading
 
-
-def max_filtering(height, width, size, I_temp):
-    n = (size//2)
+def max_filtering(height, width, kernel_size, input_img):
+    n = (kernel_size//2)
     wall = np.zeros((height+n*2, width+n*2), dtype=np.int32)
-    temp = wall.copy()
-    wall[n:height+n, n:width+n] = I_temp.copy()
+    result = wall.copy()
+    wall[n:height+n, n:width+n] = input_img.copy()
 
     for y in range(height):
         for x in range(width):
-            temp[y+n, x+n] = np.max(wall[y:y+size, x:x+size])
-    return temp[n:height+n, n:width+n]
+            result[y+n, x+n] = np.max(wall[y:y+kernel_size, x:x+kernel_size])
+    return result[n:height+n, n:width+n]
 
 
-def min_filtering(height, width, size, A):
-    n = (size // 2)
-    wall_min = np.full((height+n*2, width+n*2), 255, dtype=np.int32)
-    temp_min = wall_min.copy()
-    wall_min[n:height+n, n:width+n] = A.copy()
+def min_filtering(height, width, kernel_size, input_img):
+    n = (kernel_size // 2)
+    wall = np.full((height+n*2, width+n*2), 255, dtype=np.int32)
+    result = wall.copy()
+    wall[n:height+n, n:width+n] = input_img.copy()
 
     for y in range(height):
         for x in range(width):
-            temp_min[y+n, x+n] = np.min(wall_min[y:y+size, x:x+size])
-    return temp_min[n:height+n, n:width+n]
+            result[y+n, x+n] = np.min(wall[y:y+kernel_size, x:x+kernel_size])
+    return result[n:height+n, n:width+n]
 
 
 def background_subtraction(original_img, background, title=""):
@@ -41,19 +41,17 @@ def global_background_mean(img, mask):
     print("gloabl mean", t)
     return t
 
-
-def normalize(orig_img, img, title=""):
-
-    plt.figure()
-    plt.subplot(1, 3, 1)
-    plt.xlim([0, 256])
-    plt.title(title+"_original")
+def hist_normalize(orig_img, img, title=""):
+    # plt.figure()
+    # plt.subplot(1, 3, 1)
+    # plt.xlim([0, 256])
+    # plt.title(title+"_original")
 
     y_hist, x_hist, _ = plt.hist(np.ravel(orig_img), density=True, bins=256)
 
-    plt.subplot(1, 3, 2)
-    plt.hist(np.ravel(img), density=True, bins=256)
-    plt.title(title+"_subtracted")
+    # plt.subplot(1, 3, 2)
+    # plt.hist(np.ravel(img), density=True, bins=256)
+    # plt.title(title+"_subtracted")
 
     offset = x_hist[np.where(y_hist == y_hist.max())]
     img = img + offset
@@ -62,10 +60,10 @@ def normalize(orig_img, img, title=""):
             if img[i, j] < 0:
                 img[i, j] = 0
                 
-    plt.subplot(1, 3, 3)
-    plt.xlim([0, 256])
-    plt.title(title+"_normalized")
-    plt.hist(np.ravel(img), density=True, bins=256)
+    # plt.subplot(1, 3, 3)
+    # plt.xlim([0, 256])
+    # plt.title(title+"_normalized")
+    # plt.hist(np.ravel(img), density=True, bins=256)
 
     return img
 
@@ -73,42 +71,54 @@ def normalize(orig_img, img, title=""):
 def min_max_filtering(original_img, size, title=""):
     height, width = original_img.shape[:2]
 
-    kernel_size = 5
-    kernel = np.ones((kernel_size, kernel_size), np.float32) / \
-        (kernel_size*kernel_size)
+    # max filter
     max_img = max_filtering(height, width, size, original_img)
+    
+    # mean filter
+    kernel_size = 5
+    kernel = np.ones((kernel_size, kernel_size), np.float32) / (kernel_size * kernel_size)
     max_img_blurred = cv2.filter2D(max_img.astype(np.float32), -1, kernel)
 
-    kernel_size = 5
-    kernel = np.ones((kernel_size, kernel_size), np.float32) / \
-        (kernel_size*kernel_size)
+    # min filter
     min_img = min_filtering(height, width, size, max_img_blurred)
+
+    # mean filter
+    kernel_size = 5
+    kernel = np.ones((kernel_size, kernel_size), np.float32) / (kernel_size * kernel_size)
     min_img_blurred = cv2.filter2D(min_img.astype(np.float32), -1, kernel)
 
-    # cv2.imshow(title, cv2.hconcat(
-    #     (max_img_blurred, min_img_blurred)).astype(np.uint8))
+    # cv2.imshow(title, cv2.hconcat((max_img_blurred, min_img_blurred)).astype(np.uint8))
     diff = background_subtraction(original_img, min_img_blurred)
 
-    normed = normalize(original_img, diff, title)
+    normed = hist_normalize(original_img, diff, title)
     return normed
 
 
 if __name__ == '__main__':
-    img = cv2.imread('datasets/test7.jpg')
-    img = cv2.resize(img, (0, 0), fx=0.4, fy=0.4)
+    original_img = cv2.imread('datasets/self_doc_img/test.jpg')
+    resize_factor = 0.3
+    original_img = cv2.resize(original_img, (0, 0), fx=resize_factor, fy=resize_factor)
 
     t0 = time.time()
 
-    img_b, img_g, img_r = cv2.split(img)
+    img_b, img_g, img_r = cv2.split(original_img)
     
     img_b = min_max_filtering(img_b, 11, "B").astype(np.uint8)
     img_g = min_max_filtering(img_g, 11, "G").astype(np.uint8)
     img_r = min_max_filtering(img_r, 11, "R").astype(np.uint8)
-    # print(f'used time = {time.time() - t0}')
 
-    merged = cv2.merge((img_b, img_g, img_r))
-    final_img = cv2.hconcat((img, merged))
-    plt.show()
+    print(f'used time = {time.time() - t0}')
+
+    deshadowed_img = cv2.merge((img_b, img_g, img_r))
+
+    # calculate rmse
+    rmse = np.sqrt(np.mean((original_img - deshadowed_img)**2))
+    print(f'rmse = {rmse}')
+
+    img_display = cv2.hconcat((original_img, deshadowed_img))
+    img_display = cv2.resize(img_display, (0, 0), fx=1/resize_factor, fy=1/resize_factor)
+
+    cv2.imshow(f"original vs remove shadow({rmse=})", img_display)
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
