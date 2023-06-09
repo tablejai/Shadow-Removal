@@ -95,8 +95,9 @@ def min_max_filtering(original_img, size, title=""):
 
 
 if __name__ == '__main__':
-    original_img = cv2.imread('datasets/self_doc_img/test.jpg')
-    resize_factor = 0.5
+    image_name = "test10.jpg"
+    resize_factor = 1
+    original_img = cv2.imread(f'datasets/self_doc_img/{image_name}')
     original_img = cv2.resize(original_img, (0, 0), fx=resize_factor, fy=resize_factor)
 
     t0 = time.time()
@@ -129,6 +130,8 @@ if __name__ == '__main__':
     img_display = cv2.resize(img_display, (0, 0), fx=1/resize_factor, fy=1/resize_factor)
 
     cv2.imshow(f"original vs remove shadow", img_display)
+    
+    cv2.imwrite(f"datasets/result/{image_name}", img_display)
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
