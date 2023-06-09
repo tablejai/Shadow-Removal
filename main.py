@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from plot_helper import plot_histogram_1Channel, plot_histogram_rgb
-import threading
+from skimage.metrics import structural_similarity as ssim
 
 def max_filtering(height, width, kernel_size, input_img):
     n = (kernel_size//2)
@@ -96,7 +96,7 @@ def min_max_filtering(original_img, size, title=""):
 
 if __name__ == '__main__':
     original_img = cv2.imread('datasets/self_doc_img/test.jpg')
-    resize_factor = 0.3
+    resize_factor = 0.5
     original_img = cv2.resize(original_img, (0, 0), fx=resize_factor, fy=resize_factor)
 
     t0 = time.time()
@@ -107,18 +107,28 @@ if __name__ == '__main__':
     img_g = min_max_filtering(img_g, 11, "G").astype(np.uint8)
     img_r = min_max_filtering(img_r, 11, "R").astype(np.uint8)
 
-    print(f'used time = {time.time() - t0}')
-
     deshadowed_img = cv2.merge((img_b, img_g, img_r))
 
     # calculate rmse
     rmse = np.sqrt(np.mean((original_img - deshadowed_img)**2))
-    print(f'rmse = {rmse}')
 
+    # calculate ssim
+    ssim_val = ssim(original_img, deshadowed_img, multichannel=True, win_size=3, channel_axis=2)
+
+    # calculate psnr
+    psnr = 10 * np.log10(255**2 / rmse**2)
+
+    # print metrics
+    print(f'used time = {time.time() - t0}')
+    print(f'rmse = {rmse}')
+    print(f'ssim = {ssim_val}')
+    print(f'psnr = {psnr}')
+
+    # display
     img_display = cv2.hconcat((original_img, deshadowed_img))
     img_display = cv2.resize(img_display, (0, 0), fx=1/resize_factor, fy=1/resize_factor)
 
-    cv2.imshow(f"original vs remove shadow({rmse=})", img_display)
+    cv2.imshow(f"original vs remove shadow", img_display)
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
