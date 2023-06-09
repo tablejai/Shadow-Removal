@@ -21,3 +21,5 @@ See requirements.txt
 5 ![image](datasets/result/test7.jpg)
 
 6 ![image](datasets/result/test10.jpg)
+
+For more implementation details, you can find them here: [Shadow Removal](doc/COMP_4421_Shadow_Removal.pdf)
