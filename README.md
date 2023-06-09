@@ -7,7 +7,7 @@ In our study, we propose an effective image-processing-based algorithm to tackle
 Generally, our proposed algorithm is composed of three stages. First, we perform shadow detection by MaxMin() algorithm on each channel of input image I(c, x, y). Next, subtract the input image with the shadow mask by ShadowRemove(). Eventually, restore the histogram by HistogramRestore() and merge the result of the three-channel back to the RGB domain.
 
 ## Requirements
-[Python requirement](./README.md)
+See requirements.txt
 
 ## Result
 1 ![image](datasets/result/test.jpg)
